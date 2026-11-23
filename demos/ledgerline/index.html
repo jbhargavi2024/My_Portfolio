@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledgerline — Transaction Operations Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f6f8;--panel:#fff;--line:#e3e6eb;--text:#1b2230;--muted:#667085;--brand:#3b4cca;--brand-soft:#eef0fd;
+  --ok:#12805c;--ok-bg:#e6f5ef;--warn:#b25e09;--warn-bg:#fdf1e3;--bad:#c0262d;--bad-bg:#fdecec;--info:#2463b0;--info-bg:#e8f0fb;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.08);
+}
+[data-theme="dark"]{
+  --bg:#0f131a;--panel:#171c25;--line:#263041;--text:#e6e9ef;--muted:#8d97a8;--brand:#7b88ff;--brand-soft:#232a4a;
+  --ok-bg:#0f2e24;--warn-bg:#33240f;--bad-bg:#3a1517;--info-bg:#13263f;--ok:#4fd1a1;--warn:#f0a54a;--bad:#ff7a80;--info:#6aa8ff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.mono{font-family:'JetBrains Mono',monospace}
+
+/* sidebar */
+aside{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;padding:4px 10px 22px}
+.brand i{width:28px;height:28px;border-radius:8px;background:var(--brand);display:grid;place-items:center;color:#fff;font-style:normal;font-size:14px}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;border:0;background:none;color:var(--muted);cursor:pointer;text-align:left;width:100%}
+.nav-btn:hover{background:var(--bg);color:var(--text)}
+.nav-btn[aria-current="page"]{background:var(--brand-soft);color:var(--brand);font-weight:600}
+.nav-btn .count{margin-left:auto;background:var(--bad);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px}
+.side-foot{margin-top:auto;font-size:12px;color:var(--muted);padding:10px;border-top:1px solid var(--line)}
+@media(max-width:860px){body{grid-template-columns:1fr}aside{display:none}}
+
+/* top */
+header{display:flex;align-items:center;gap:16px;padding:16px 28px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+header h1{font-size:18px}
+header .env{font-size:11px;background:var(--warn-bg);color:var(--warn);padding:3px 8px;border-radius:6px;font-weight:600}
+.spacer{flex:1}
+.icon-btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 11px;cursor:pointer}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:600;font-size:13px}
+main{padding:24px 28px 60px;max-width:1400px;width:100%}
+.view{display:none}.view.active{display:block}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.kpi small{color:var(--muted);font-size:12px}
+.kpi b{display:block;font-size:26px;margin:6px 0 2px}
+.kpi .delta{font-size:12px}
+.up{color:var(--ok)}.down{color:var(--bad)}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}}
+
+.grid2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+.card-h h2{font-size:14px}
+.card-b{padding:18px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:none;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand);font-weight:600}
+svg text{fill:var(--muted);font-size:11px;font-family:Inter}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+.bar-row{display:grid;grid-template-columns:90px 1fr 48px;gap:10px;align-items:center;margin-bottom:12px;font-size:13px}
+.bar{height:8px;background:var(--bg);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--brand);border-radius:99px;transition:width .6s}
+
+/* table */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+.search{flex:1;min-width:220px;position:relative}
+.search input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.search::before{content:"⌕";position:absolute;left:12px;top:6px;color:var(--muted);font-size:17px}
+select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:500}
+.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 18px 0}
+.fchip{background:var(--brand-soft);color:var(--brand);border:0;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--muted);font-weight:500;padding:10px 18px;border-bottom:1px solid var(--line);white-space:nowrap}
+th button{border:0;background:none;cursor:pointer;color:inherit;font-weight:inherit}
+th[aria-sort="ascending"] button::after{content:" ↑"}th[aria-sort="descending"] button::after{content:" ↓"}
+td{padding:11px 18px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover,tbody tr.sel{background:var(--brand-soft)}
+td.amt{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+th.amt{text-align:right}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.s-Settled{background:var(--ok-bg);color:var(--ok)}.s-Pending{background:var(--info-bg);color:var(--info)}
+.s-Flagged{background:var(--warn-bg);color:var(--warn)}.s-Declined{background:var(--bad-bg);color:var(--bad)}
+.risk{display:inline-flex;gap:2px}.risk i{width:6px;height:12px;border-radius:2px;background:var(--line)}
+.risk.r1 i:nth-child(-n+1){background:var(--ok)}.risk.r2 i:nth-child(-n+2){background:var(--warn)}.risk.r3 i{background:var(--bad)}
+.pager{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;color:var(--muted);font-size:13px}
+.pager div{display:flex;gap:6px}
+.empty{padding:50px;text-align:center;color:var(--muted)}
+.table-wrap{overflow-x:auto}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,14,22,.35);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:min(440px,100%);background:var(--panel);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .25s ease;z-index:21;display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.drawer header{position:static}
+.drawer .body{padding:22px;overflow:auto;flex:1}
+.big-amt{font-size:30px;font-weight:700;margin:4px 0 10px}
+dl{display:grid;grid-template-columns:130px 1fr;gap:10px 12px;margin:20px 0;font-size:13px}
+dt{color:var(--muted)}
+.tl{list-style:none;border-left:2px solid var(--line);margin-left:6px;padding-left:16px}
+.tl li{position:relative;margin-bottom:14px;font-size:13px}
+.tl li::before{content:"";position:absolute;left:-22px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--brand);border:2px solid var(--panel)}
+.tl small{display:block;color:var(--muted)}
+.drawer footer{padding:16px 22px;border-top:1px solid var(--line);display:flex;gap:10px}
+h3.sec{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:20px 0 12px}
+
+/* queue */
+.queue{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:1000px){.queue{grid-template-columns:1fr}}
+.col h2{font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;color:var(--muted)}
+.qcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
+.qcard .top{display:flex;justify-content:space-between;margin-bottom:6px}
+.qcard p{color:var(--muted);font-size:12.5px;margin-bottom:10px}
+.qcard .acts{display:flex;gap:6px}
+.qcard .acts button{font-size:12px;padding:5px 10px}
+
+/* about */
+.about{max-width:760px}
+.about p{color:var(--muted);line-height:1.7;margin-bottom:14px}
+.about ul{color:var(--muted);line-height:1.8;padding-left:18px;margin-bottom:14px}
+.stack{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.stack span{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,20px);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:8px;opacity:0;transition:.25s;z-index:30;font-size:13px}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<aside aria-label="Main navigation">
+  <div class="brand"><i>L</i>Ledgerline</div>
+  <button class="nav-btn" data-view="dashboard" aria-current="page">▦ Dashboard</button>
+  <button class="nav-btn" data-view="transactions">⇄ Transactions</button>
+  <button class="nav-btn" data-view="queue">⚑ Review Queue <span class="count" id="qCount">0</span></button>
+  <button class="nav-btn" data-view="about">ⓘ About this project</button>
+  <div class="side-foot"><a href="../../index.html#projects" style="color:var(--brand);text-decoration:none;font-weight:600">← Back to portfolio</a><br><br>Demo build · mock data only</div>
+</aside>
+
+<div>
+<header>
+  <h1 id="pageTitle">Dashboard</h1>
+  <span class="env">SANDBOX</span>
+  <div class="spacer"></div>
+  <button class="icon-btn" id="themeBtn" aria-label="Toggle dark mode">◐ Theme</button>
+  <div class="avatar" aria-label="Signed in as Bhargavi J">BJ</div>
+</header>
+
+<main>
+  <!-- DASHBOARD -->
+  <section class="view active" id="dashboard" aria-labelledby="pageTitle">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h"><h2>Transaction volume</h2>
+          <div class="seg" role="group" aria-label="Range">
+            <button aria-pressed="false" data-range="7">7D</button><button aria-pressed="true" data-range="14">14D</button><button aria-pressed="false" data-range="30">30D</button>
+          </div>
+        </div>
+        <div class="card-b"><svg id="chart" viewBox="0 0 640 220" width="100%" role="img" aria-label="Line chart of daily transaction volume"></svg>
+          <div class="legend"><span style="--c:var(--brand)">Volume</span><span style="--c:var(--bad)">Declines</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>By channel</h2></div>
+        <div class="card-b" id="channels"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Recent flagged activity</h2><button class="btn" data-goto="queue">Open queue →</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Txn ID</th><th>Merchant</th><th>Reason</th><th class="amt">Amount</th></tr></thead><tbody id="recentFlagged"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- TRANSACTIONS -->
+  <section class="view" id="transactions">
+    <div class="card">
+      <div class="toolbar">
+        <label class="search"><span class="sr">Search transactions</span><input id="q" type="search" placeholder="Search by ID, merchant or account…"></label>
+        <label><span class="sr">Status</span><select id="fStatus"><option value="">All statuses</option><option>Settled</option><option>Pending</option><option>Flagged</option><option>Declined</option></select></label>
+        <label><span class="sr">Channel</span><select id="fChannel"><option value="">All channels</option><option>Card</option><option>ACH</option><option>Wire</option><option>Mobile</option></select></label>
+        <button class="btn" id="exportBtn">Export CSV</button>
+      </div>
+      <div class="chips" id="activeChips"></div>
+      <div class="table-wrap">
+      <table aria-describedby="resultInfo">
+        <thead><tr>
+          <th aria-sort="descending" data-key="date"><button>Date</button></th>
+          <th data-key="id"><button>Txn ID</button></th>
+          <th data-key="merchant"><button>Merchant</button></th>
+          <th>Account</th><th>Channel</th>
+          <th data-key="status"><button>Status</button></th>
+          <th>Risk</th>
+          <th class="amt" data-key="amount"><button>Amount</button></th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      </div>
+      <div class="pager"><span id="resultInfo" aria-live="polite"></span><div><button class="btn" id="prev">Prev</button><button class="btn" id="next">Next</button></div></div>
+    </div>
+  </section>
+
+  <!-- QUEUE -->
+  <section class="view" id="queue">
+    <div class="queue" id="queueCols"></div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="view" id="about">
+    <div class="card"><div class="card-b about">
+      <h2 style="margin-bottom:12px">About Ledgerline</h2>
+      <p>Ledgerline is a portfolio project by <strong>Bhargavi Jakkampudi</strong>. It's a small operations console for a payments team: monitor volume, search and filter transactions, look at one transaction in detail, and work through a fraud-review queue.</p>
+      <p>It's based on the kind of screens I build for high-volume financial transaction platforms. All data here is generated in the browser. None of it is real.</p>
+      <h3 class="sec">UX decisions</h3>
+      <ul>
+        <li>The details panel keeps the user in context instead of sending them to a new page, so analysts don't lose their place in a filtered list.</li>
+        <li>Status uses color and a text label, and risk uses a bar count, so meaning never depends on color alone.</li>
+        <li>The table is keyboard-friendly: Tab to a row, Enter to open, Esc to close. Sort state is exposed with <span class="mono">aria-sort</span>.</li>
+        <li>Active filters show up as removable chips, so it's always clear why a row is or isn't in the list.</li>
+        <li>Light and dark themes run on CSS custom properties, the same pattern I use for shared design-system tokens.</li>
+      </ul>
+      <h3 class="sec">How it maps to production</h3>
+      <p>This demo is plain HTML, CSS and JavaScript so it opens anywhere without a build. In production I'd build the same screens as Angular standalone components with Signals for state, ag-Grid for the table, Angular Material for the drawer and form controls, and an HttpClient service talking to Spring Boot REST APIs.</p>
+      <div class="stack"><span>Angular</span><span>TypeScript</span><span>RxJS / Signals</span><span>Angular Material</span><span>ag-Grid</span><span>WCAG / ARIA</span><span>Figma</span><span>Spring Boot APIs</span></div>
+    </div></div>
+  </section>
+</main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle" aria-hidden="true">
+  <header><h1 id="dTitle" style="font-size:15px">Transaction</h1><div class="spacer"></div><button class="icon-btn" id="closeDrawer" aria-label="Close details">✕</button></header>
+  <div class="body" id="dBody"></div>
+  <footer id="dFoot"></footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// ---------- mock data ----------
+let seed = 42; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const pick = a => a[Math.floor(rnd() * a.length)];
+const merchants = ['Northwind Grocers','Blue Harbor Fuel','Cedar & Co. Hardware','Metro Transit Pass','Summit Pharmacy','Lumen Electronics','Orchard Café','Atlas Airlines','Pinecrest Utilities','Riverbank Insurance','Kite Streaming','Harbor Hotel Group'];
+const channels = ['Card','ACH','Wire','Mobile'];
+const reasons = ['Velocity spike','Geo mismatch','Amount above profile','New device','Duplicate attempt'];
+const now = new Date('2026-11-23T15:00:00');
+const txns = Array.from({length: 240}, (_, i) => {
+  const r = rnd(); const status = r < .84 ? 'Settled' : r < .92 ? 'Pending' : r < .97 ? 'Flagged' : 'Declined';
+  const ch = pick(channels);
+  const amount = +(ch === 'Wire' ? 2000 + rnd() * 48000 : 5 + rnd() * (rnd() < .1 ? 4800 : 380)).toFixed(2);
+  const d = new Date(now - rnd() * 14 * 864e5);
+  return { id: 'TX-' + (884200 + i * 7), date: d, merchant: pick(merchants), account: '•••• ' + String(1000 + Math.floor(rnd() * 8999)),
+    channel: ch, status, amount, risk: status === 'Flagged' ? 3 : status === 'Declined' ? (rnd() < .5 ? 3 : 2) : rnd() < .2 ? 2 : 1,
+    reason: status === 'Flagged' || status === 'Declined' ? pick(reasons) : null, review: status === 'Flagged' ? 'new' : null };
+});
+txns.filter(t => t.review).slice(0, 4).forEach(t => t.review = 'progress');
+
+const fmt = n => n.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+const fdate = d => d.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) + ' · ' + d.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
+const $ = s => document.querySelector(s);
+const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); };
+
+// ---------- navigation ----------
+const titles = {dashboard: 'Dashboard', transactions: 'Transactions', queue: 'Review Queue', about: 'About this project'};
+function go(v) {
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === v));
+  document.querySelectorAll('.nav-btn').forEach(b => b.dataset.view === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  $('#pageTitle').textContent = titles[v];
+  if (v === 'queue') renderQueue();
+  if (v === 'transactions') renderTable();
+}
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => go(b.dataset.view));
+document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => go(b.dataset.goto));
+
+// theme
+const themeBtn = $('#themeBtn');
+themeBtn.onclick = () => { const d = document.documentElement; d.dataset.theme = d.dataset.theme === 'dark' ? '' : 'dark'; };
+
+// ---------- dashboard ----------
+function renderKpis() {
+  const vol = txns.reduce((s, t) => s + t.amount, 0);
+  const settled = txns.filter(t => t.status === 'Settled').length / txns.length * 100;
+  const flagged = txns.filter(t => t.review && t.review !== 'done').length;
+  const k = [['Processed volume (14D)', fmt(vol).replace(/\.\d+$/, ''), '+8.2% vs prior', 'up'],
+             ['Transactions', txns.length.toLocaleString(), '+3.1% vs prior', 'up'],
+             ['Settlement rate', settled.toFixed(1) + '%', '+0.4 pts', 'up'],
+             ['Open reviews', flagged, flagged > 10 ? 'Above SLA target' : 'Within SLA', flagged > 10 ? 'down' : 'up']];
+  $('#kpis').innerHTML = k.map(([l, v, d, c]) => `<div class="kpi"><small>${l}</small><b>${v}</b><span class="delta ${c}">${d}</span></div>`).join('');
+  $('#qCount').textContent = flagged;
+}
+function renderChart(days) {
+  const W = 640, H = 220, P = 30; const pts = [], dec = [];
+  let s2 = days * 13;
+  for (let i = 0; i < days; i++) { s2 = (s2 * 16807) % 2147483647; const v = 1200 + (s2 % 900) + Math.sin(i / 2) * 220; pts.push(v); dec.push(v * (0.03 + (s2 % 40) / 1000)); }
+  const max = Math.max(...pts) * 1.1; const x = i => P + i * (W - P * 2) / (days - 1); const y = v => H - P - v / max * (H - P * 2);
+  const line = a => a.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ');
+  const grid = [0, .25, .5, .75, 1].map(f => `<line x1="${P}" x2="${W - P}" y1="${y(max * f)}" y2="${y(max * f)}" stroke="var(--line)"/><text x="0" y="${y(max * f) + 4}">${Math.round(max * f / 100) / 10}k</text>`).join('');
+  $('#chart').innerHTML = grid +
+    `<path d="${line(pts)} L${x(days - 1)} ${H - P} L${P} ${H - P}Z" fill="var(--brand)" opacity=".08"/>` +
+    `<path d="${line(pts)}" fill="none" stroke="var(--brand)" stroke-width="2.5"/>` +
+    `<path d="${line(dec)}" fill="none" stroke="var(--bad)" stroke-width="2" stroke-dasharray="4 4"/>` +
+    pts.map((v, i) => i % Math.ceil(days / 7) === 0 ? `<text x="${x(i) - 10}" y="${H - 8}">D-${days - i}</text>` : '').join('');
+}
+document.querySelectorAll('[data-range]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('[data-range]').forEach(o => o.setAttribute('aria-pressed', o === b)); renderChart(+b.dataset.range);
+});
+function renderChannels() {
+  const tot = txns.length;
+  $('#channels').innerHTML = channels.map(c => { const n = txns.filter(t => t.channel === c).length; const p = Math.round(n / tot * 100);
+    return `<div class="bar-row"><span>${c}</span><div class="bar"><i style="width:${p}%"></i></div><span class="mono">${p}%</span></div>`; }).join('');
+}
+function renderRecent() {
+  $('#recentFlagged').innerHTML = txns.filter(t => t.review && t.review !== 'done').slice(0, 5).map(t =>
+    `<tr tabindex="0" data-id="${t.id}"><td class="mono">${t.id}</td><td>${t.merchant}</td><td>${t.reason}</td><td class="amt">${fmt(t.amount)}</td></tr>`).join('');
+}
+
+// ---------- table ----------
+const state = {q: '', status: '', channel: '', sort: 'date', dir: -1, page: 0, size: 12};
+function filtered() {
+  const q = state.q.toLowerCase();
+  return txns.filter(t => (!q || (t.id + t.merchant + t.account).toLowerCase().includes(q)) && (!state.status || t.status === state.status) && (!state.channel || t.channel === state.channel))
+    .sort((a, b) => (a[state.sort] > b[state.sort] ? 1 : -1) * state.dir);
+}
+function renderTable() {
+  const list = filtered(); const pages = Math.max(1, Math.ceil(list.length / state.size)); state.page = Math.min(state.page, pages - 1);
+  const slice = list.slice(state.page * state.size, (state.page + 1) * state.size);
+  $('#rows').innerHTML = slice.length ? slice.map(t => `<tr tabindex="0" data-id="${t.id}">
+    <td>${fdate(t.date)}</td><td class="mono">${t.id}</td><td>${t.merchant}</td><td class="mono">${t.account}</td><td>${t.channel}</td>
+    <td><span class="pill s-${t.status}">${t.status}</span></td>
+    <td><span class="risk r${t.risk}" aria-label="Risk ${['', 'low', 'medium', 'high'][t.risk]}"><i></i><i></i><i></i></span></td>
+    <td class="amt">${fmt(t.amount)}</td></tr>`).join('') : `<tr><td colspan="8" class="empty">No transactions match these filters.</td></tr>`;
+  $('#resultInfo').textContent = `${list.length ? state.page * state.size + 1 : 0}–${Math.min((state.page + 1) * state.size, list.length)} of ${list.length} transactions`;
+  $('#prev').disabled = state.page === 0; $('#next').disabled = state.page >= pages - 1;
+  const chips = [['q', state.q && `“${state.q}”`], ['status', state.status], ['channel', state.channel]].filter(c => c[1]);
+  $('#activeChips').innerHTML = chips.map(([k, v]) => `<button class="fchip" data-clear="${k}" aria-label="Remove filter ${v}">${v} ✕</button>`).join('');
+  document.querySelectorAll('th[data-key]').forEach(th => th.setAttribute('aria-sort', th.dataset.key === state.sort ? (state.dir > 0 ? 'ascending' : 'descending') : 'none'));
+}
+$('#q').oninput = e => { state.q = e.target.value.trim(); state.page = 0; renderTable(); };
+$('#fStatus').onchange = e => { state.status = e.target.value; state.page = 0; renderTable(); };
+$('#fChannel').onchange = e => { state.channel = e.target.value; state.page = 0; renderTable(); };
+$('#prev').onclick = () => { state.page--; renderTable(); };
+$('#next').onclick = () => { state.page++; renderTable(); };
+$('#activeChips').onclick = e => { const k = e.target.dataset.clear; if (!k) return; state[k] = '';
+  ({q: $('#q'), status: $('#fStatus'), channel: $('#fChannel')})[k].value = ''; renderTable(); };
+document.querySelectorAll('th[data-key] button').forEach(b => b.onclick = () => { const k = b.parentElement.dataset.key;
+  state.dir = state.sort === k ? -state.dir : 1; state.sort = k; renderTable(); });
+$('#exportBtn').onclick = () => {
+  const csv = ['id,date,merchant,channel,status,amount', ...filtered().map(t => [t.id, t.date.toISOString(), t.merchant, t.channel, t.status, t.amount].join(','))].join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'})); a.download = 'transactions.csv'; a.click();
+  toast(`Exported ${filtered().length} rows`);
+};
+
+// ---------- drawer ----------
+let lastFocus = null;
+function openDrawer(id) {
+  const t = txns.find(x => x.id === id); if (!t) return; lastFocus = document.activeElement;
+  document.querySelectorAll('tbody tr').forEach(r => r.classList.toggle('sel', r.dataset.id === id));
+  $('#dTitle').textContent = t.id;
+  const steps = [['Authorized', 0], ['Risk scored · ' + ['', 'low', 'medium', 'high'][t.risk], 2]];
+  if (t.status === 'Settled') steps.push(['Settled to account', 240]);
+  if (t.status === 'Flagged') steps.push(['Flagged · ' + t.reason, 3]);
+  if (t.status === 'Declined') steps.push(['Declined · ' + t.reason, 3]);
+  if (t.status === 'Pending') steps.push(['Awaiting settlement batch', 60]);
+  $('#dBody').innerHTML = `<span class="pill s-${t.status}">${t.status}</span>
+    <div class="big-amt">${fmt(t.amount)}</div><div style="color:var(--muted)">${t.merchant}</div>
+    <dl><dt>Date</dt><dd>${fdate(t.date)}</dd><dt>Account</dt><dd class="mono">${t.account}</dd><dt>Channel</dt><dd>${t.channel}</dd>
+    <dt>Risk</dt><dd><span class="risk r${t.risk}"><i></i><i></i><i></i></span></dd>${t.reason ? `<dt>Reason</dt><dd>${t.reason}</dd>` : ''}
+    <dt>Auth code</dt><dd class="mono">${t.id.slice(3)}A</dd></dl>
+    <h3 class="sec">Lifecycle</h3><ol class="tl">${steps.map(([s, m]) => `<li>${s}<small>${fdate(new Date(+t.date + m * 6e4))}</small></li>`).join('')}</ol>`;
+  $('#dFoot').innerHTML = t.review && t.review !== 'done'
+    ? `<button class="btn primary" data-act="approve">Approve</button><button class="btn danger" data-act="decline">Decline</button>`
+    : `<button class="btn" data-act="copy">Copy ID</button><button class="btn" data-act="flag">Flag for review</button>`;
+  $('#dFoot').onclick = e => { const a = e.target.dataset.act; if (!a) return;
+    if (a === 'copy') { navigator.clipboard?.writeText(t.id); toast('Copied ' + t.id); return; }
+    if (a === 'flag') { t.status = 'Flagged'; t.review = 'new'; t.risk = 3; t.reason = 'Manual analyst flag'; toast(t.id + ' sent to review queue'); }
+    if (a === 'approve') { t.status = 'Settled'; t.review = 'done'; toast(t.id + ' approved'); }
+    if (a === 'decline') { t.status = 'Declined'; t.review = 'done'; toast(t.id + ' declined'); }
+    refresh(); closeDrawer(); };
+  $('#drawer').classList.add('open'); $('#drawer').setAttribute('aria-hidden', 'false'); $('#scrim').classList.add('open'); $('#closeDrawer').focus();
+}
+function closeDrawer() { $('#drawer').classList.remove('open'); $('#drawer').setAttribute('aria-hidden', 'true'); $('#scrim').classList.remove('open');
+  document.querySelectorAll('tbody tr.sel').forEach(r => r.classList.remove('sel')); lastFocus?.focus?.(); }
+$('#closeDrawer').onclick = closeDrawer; $('#scrim').onclick = closeDrawer;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer();
+  if (e.key === 'Enter' && e.target.matches('tr[data-id]')) openDrawer(e.target.dataset.id); });
+document.addEventListener('click', e => { const r = e.target.closest('tr[data-id]'); if (r) openDrawer(r.dataset.id); });
+
+// ---------- queue ----------
+function renderQueue() {
+  const cols = [['new', 'New'], ['progress', 'In review'], ['done', 'Resolved today']];
+  $('#queueCols').innerHTML = cols.map(([k, l]) => { const items = txns.filter(t => t.review === k);
+    return `<div class="col"><h2>${l}<span>${items.length}</span></h2>${items.slice(0, 8).map(t => `<div class="qcard">
+      <div class="top"><b class="mono">${t.id}</b><span>${fmt(t.amount)}</span></div>
+      <p>${t.merchant} · ${t.reason || ''}</p>
+      <div class="acts">${k === 'new' ? `<button class="btn" data-q="${t.id}" data-to="progress">Start review</button>` : ''}
+      ${k === 'progress' ? `<button class="btn primary" data-q="${t.id}" data-to="approve">Approve</button><button class="btn danger" data-q="${t.id}" data-to="decline">Decline</button>` : ''}
+      ${k === 'done' ? `<span class="pill s-${t.status}">${t.status}</span>` : ''}</div></div>`).join('') || '<p style="color:var(--muted);font-size:13px">Nothing here.</p>'}</div>`; }).join('');
+}
+$('#queueCols').onclick = e => { const id = e.target.dataset.q; if (!id) return; const t = txns.find(x => x.id === id);
+  if (e.target.dataset.to === 'progress') { t.review = 'progress'; toast('Assigned ' + id + ' to you'); }
+  if (e.target.dataset.to === 'approve') { t.review = 'done'; t.status = 'Settled'; toast(id + ' approved'); }
+  if (e.target.dataset.to === 'decline') { t.review = 'done'; t.status = 'Declined'; toast(id + ' declined'); }
+  refresh(); };
+
+function refresh() { renderKpis(); renderRecent(); renderQueue(); renderTable(); }
+renderChart(14); renderChannels(); refresh();
+</script>
+</body>
+</html>
